@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}
+Servicios
+{% endblock %}
+
+{% block content %}
+
+<h1 class="text-center mb-4">
+    Servicios disponibles
+</h1>
+
+<div class="row">
+
+    {% for servicio in servicios %}
+
+    <div class="col-md-6 mb-4">
+
+        <div class="card h-100 shadow-sm">
+
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    {{ servicio.nombre|upper }}
+                </h5>
+
+                <p class="card-text">
+                    {{ servicio.descripcion }}
+                </p>
+
+                <p>
+                    <strong>Precio:</strong>
+                    ${{ "%.2f"|format(servicio.precio) }}
+                </p>
+
+                {% if servicio.disponible %}
+
+                    <span class="badge bg-success">
+                        Disponible
+                    </span>
+
+                {% else %}
+
+                    <span class="badge bg-danger">
+                        Agotado
+                    </span>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

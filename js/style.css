@@ -1,0 +1,98 @@
+/* ===========================
+   ESTILOS GENERALES
+=========================== */
+
+body{
+    background-color:#f5f5f5;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+/* ===========================
+   ENCABEZADO
+=========================== */
+
+header{
+    text-align:center;
+    box-shadow:0 3px 10px rgba(0,0,0,0.2);
+}
+
+/* ===========================
+   NAVBAR
+=========================== */
+
+.navbar{
+    box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* ===========================
+   TARJETAS
+=========================== */
+
+.card{
+    border:none;
+    border-radius:12px;
+    transition:all 0.3s ease;
+}
+
+.card:hover{
+    transform:translateY(-5px);
+    box-shadow:0 10px 20px rgba(0,0,0,0.15);
+}
+
+/* ===========================
+   BOTONES
+=========================== */
+
+.btn{
+    border-radius:8px;
+}
+
+/* ===========================
+   FORMULARIO
+=========================== */
+
+.form-control,
+.form-select{
+    border-radius:8px;
+}
+
+/* ===========================
+   BADGE
+=========================== */
+
+.badge{
+    font-size:14px;
+}
+
+/* ===========================
+   SPINNER
+=========================== */
+
+#spinner{
+    margin:20px 0;
+}
+
+/* ===========================
+   FOOTER
+=========================== */
+
+footer{
+    margin-top:40px;
+    box-shadow:0 -2px 10px rgba(0,0,0,0.1);
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+
+@media (max-width:768px){
+
+    header h1{
+        font-size:26px;
+    }
+
+    .card{
+        margin-bottom:20px;
+    }
+
+}
