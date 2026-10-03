@@ -1,4 +1,3 @@
-```html
 {% extends "base.html" %}
 
 {% block title %}
@@ -82,11 +81,11 @@ Registrar Servicio
                     <!-- CATEGORÍA -->
                     <div class="mb-3">
 
-                        {{ form.categoria.label(class="form-label") }}
+                        {{ form.categoria_id.label(class="form-label") }}
 
-                        {{ form.categoria(class="form-select") }}
+                        {{ form.categoria_id(class="form-select") }}
 
-                        {% for error in form.categoria.errors %}
+                        {% for error in form.categoria_id.errors %}
                             <div class="text-danger mt-1">
                                 {{ error }}
                             </div>
@@ -94,14 +93,19 @@ Registrar Servicio
 
                     </div>
 
+                    <!-- DISPONIBLE -->
+                    <div class="mb-3 form-check">
+
+                        {{ form.disponible(class="form-check-input") }}
+
+                        {{ form.disponible.label(class="form-check-label") }}
+
+                    </div>
+
                     <!-- BOTÓN -->
                     <div class="d-grid">
 
-                        <button
-                            type="submit"
-                            class="btn btn-success">
-                            Registrar Servicio
-                        </button>
+                        {{ form.submit(class="btn btn-success") }}
 
                     </div>
 
@@ -116,4 +120,3 @@ Registrar Servicio
 </div>
 
 {% endblock %}
-```

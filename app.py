@@ -1,209 +1,374 @@
+# -*- coding: utf-8 -*-
+
 from flask import Flask, render_template, redirect, url_for, flash
 from forms.servicio_form import ServicioForm
-import sqlite3
-import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 
-# ==========================================
+# ==========================================================
 # CONFIGURACIÓN DE FLASK
-# ==========================================
+# ==========================================================
 
 app = Flask(__name__)
 
 app.config["SECRET_KEY"] = "clave-secreta-granix"
 
 
-# ==========================================
-# CONFIGURACIÓN DE LA BASE DE DATOS
-# ==========================================
+# ==========================================================
+# CONEXIÓN A POSTGRESQL
+# ==========================================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def get_db_connection():
 
-DATA_DIR = os.path.join(BASE_DIR, "data")
-
-DATABASE = os.path.join(DATA_DIR, "servicios.db")
-
-
-# ==========================================
-# CONEXIÓN A LA BASE DE DATOS
-# ==========================================
-
-def conectar_db():
-
-    # Crear carpeta data si no existe
-    os.makedirs(DATA_DIR, exist_ok=True)
-
-    # Conectar a SQLite
-    conn = sqlite3.connect(DATABASE)
-
-    # Permitir acceder a las columnas por nombre
-    conn.row_factory = sqlite3.Row
-
-    return conn
+    return psycopg2.connect(
+        host="127.0.0.1",
+        port=5432,
+        database="registro_servicios",
+        user="postgres",
+        password="Jose21"
+    )
 
 
-# ==========================================
-# CREAR BASE DE DATOS Y TABLA
-# ==========================================
+# ==========================================================
+# OBTENER CATEGORÍAS
+# ==========================================================
 
-def crear_base_datos():
+def obtener_categorias():
 
-    # Crear carpeta data
-    os.makedirs(DATA_DIR, exist_ok=True)
+    conn = None
+    cur = None
 
-    # Conectar a la base de datos
-    conn = conectar_db()
+    try:
 
-    # Crear tabla servicios
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS servicios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            precio REAL NOT NULL,
-            descripcion TEXT NOT NULL,
-            categoria TEXT NOT NULL,
-            disponible INTEGER NOT NULL DEFAULT 1
-        )
-    """)
+        conn = get_db_connection()
 
-    # Guardar cambios
-    conn.commit()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
 
-    # Cerrar conexión
-    conn.close()
+        cur.execute("""
+            SELECT
+                id,
+                nombre
+            FROM categorias
+            ORDER BY nombre ASC
+        """)
+
+        categorias = cur.fetchall()
+
+        print("==========================================")
+        print("CATEGORÍAS ENCONTRADAS:")
+        print(categorias)
+        print("==========================================")
+
+        return categorias
+
+    except psycopg2.Error as e:
+
+        print("ERROR AL OBTENER CATEGORÍAS:")
+        print(e)
+
+        return []
+
+    finally:
+
+        if cur:
+            cur.close()
+
+        if conn:
+            conn.close()
 
 
-# ==========================================
-# PÁGINA DE INICIO
-# ==========================================
+# ==========================================================
+# INICIO
+# ==========================================================
 
 @app.route("/")
 def inicio():
 
-    # Nombre del sistema
-    nombre_sistema = "Sistema de Registro de Servicios"
+    return redirect(url_for("index"))
 
-    # Crear formulario
+
+# ==========================================================
+# FORMULARIO DE REGISTRO
+# ==========================================================
+
+@app.route("/registro", methods=["GET"])
+def index():
+
     form = ServicioForm()
 
-    # Mostrar index.html y enviar el formulario
+    categorias = obtener_categorias()
+
+    form.categoria_id.choices = [
+        (
+            categoria["id"],
+            categoria["nombre"]
+        )
+        for categoria in categorias
+    ]
+
+    if not categorias:
+
+        flash(
+            "No se encontraron categorías en la base de datos.",
+            "warning"
+        )
+
     return render_template(
         "index.html",
-        nombre_sistema=nombre_sistema,
         form=form
     )
 
 
-# ==========================================
-# MOSTRAR SERVICIOS
-# ==========================================
-
-@app.route("/servicios")
-def servicios_page():
-
-    # Conectar a SQLite
-    conn = conectar_db()
-
-    # Consultar servicios
-    servicios = conn.execute("""
-        SELECT
-            id,
-            nombre,
-            precio,
-            descripcion,
-            categoria,
-            disponible
-        FROM servicios
-        ORDER BY id DESC
-    """).fetchall()
-
-    # Cerrar conexión
-    conn.close()
-
-    # Mostrar servicios.html
-    return render_template(
-        "servicios.html",
-        servicios=servicios
-    )
-
-
-# ==========================================
+# ==========================================================
 # REGISTRAR SERVICIO
-# ==========================================
+# ==========================================================
 
-@app.route("/registrar", methods=["GET", "POST"])
+@app.route("/registrar-servicio", methods=["POST"])
 def registrar_servicio():
 
-    # Crear formulario
     form = ServicioForm()
 
-    # Validar formulario
-    if form.validate_on_submit():
+    categorias = obtener_categorias()
 
-        # Obtener datos
+    form.categoria_id.choices = [
+        (
+            categoria["id"],
+            categoria["nombre"]
+        )
+        for categoria in categorias
+    ]
+
+    if not form.validate_on_submit():
+
+        print("ERRORES DEL FORMULARIO:")
+        print(form.errors)
+
+        flash(
+            "Revisa los datos ingresados.",
+            "warning"
+        )
+
+        return render_template(
+            "index.html",
+            form=form
+        )
+
+    conn = None
+    cur = None
+
+    try:
+
         nombre = form.nombre.data
         precio = form.precio.data
         descripcion = form.descripcion.data
-        categoria = form.categoria.data
+        disponible = form.disponible.data
+        categoria_id = form.categoria_id.data
 
-        # Conectar a SQLite
-        conn = conectar_db()
+        conn = get_db_connection()
 
-        try:
+        cur = conn.cursor()
 
-            # Insertar servicio
-            conn.execute("""
-                INSERT INTO servicios
-                (
-                    nombre,
-                    precio,
-                    descripcion,
-                    categoria,
-                    disponible
-                )
-                VALUES (?, ?, ?, ?, ?)
-            """, (
+        cur.execute("""
+            INSERT INTO servicios
+            (
                 nombre,
                 precio,
                 descripcion,
-                categoria,
-                1
-            ))
+                disponible,
+                categoria_id
+            )
+            VALUES
+            (%s, %s, %s, %s, %s)
+        """, (
+            nombre,
+            precio,
+            descripcion,
+            disponible,
+            categoria_id
+        ))
 
-            # Guardar cambios
-            conn.commit()
+        conn.commit()
 
-        finally:
-
-            # Cerrar conexión
-            conn.close()
-
-        # Mensaje de confirmación
         flash(
             "Servicio registrado correctamente.",
             "success"
         )
 
-        # Ir a Servicios
-        return redirect(
-            url_for("servicios_page")
+        return redirect(url_for("servicios_page"))
+
+    except psycopg2.Error as e:
+
+        if conn:
+            conn.rollback()
+
+        print("ERROR DE POSTGRESQL:")
+        print(e)
+
+        flash(
+            "Error al guardar el servicio.",
+            "danger"
         )
 
-    # Si hay errores, mostrar formulario
-    return render_template(
-        "formulario_servicio.html",
-        form=form
-    )
+        return redirect(url_for("index"))
+
+    except Exception as e:
+
+        if conn:
+            conn.rollback()
+
+        print("ERROR DE LA APLICACIÓN:")
+        print(e)
+
+        flash(
+            "Ocurrió un error al registrar el servicio.",
+            "danger"
+        )
+
+        return redirect(url_for("index"))
+
+    finally:
+
+        if cur:
+            cur.close()
+
+        if conn:
+            conn.close()
 
 
-# ==========================================
-# INICIAR APLICACIÓN
-# ==========================================
+# ==========================================================
+# LISTAR SERVICIOS
+# ==========================================================
+
+@app.route("/servicios")
+def servicios_page():
+
+    conn = None
+    cur = None
+
+    try:
+
+        conn = get_db_connection()
+
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute("""
+            SELECT
+                s.id,
+                s.nombre,
+                s.precio,
+                s.descripcion,
+                s.disponible,
+                s.categoria_id,
+                c.nombre AS categoria
+            FROM servicios AS s
+            LEFT JOIN categorias AS c
+                ON s.categoria_id = c.id
+            ORDER BY s.id DESC
+        """)
+
+        servicios = cur.fetchall()
+
+        return render_template(
+            "servicios.html",
+            servicios=servicios
+        )
+
+    except psycopg2.Error as e:
+
+        print("ERROR DE POSTGRESQL:")
+        print(e)
+
+        flash(
+            "No se pudieron cargar los servicios.",
+            "danger"
+        )
+
+        return redirect(url_for("index"))
+
+    except Exception as e:
+
+        print("ERROR:")
+        print(e)
+
+        flash(
+            "Ocurrió un error al cargar los servicios.",
+            "danger"
+        )
+
+        return redirect(url_for("index"))
+
+    finally:
+
+        if cur:
+            cur.close()
+
+        if conn:
+            conn.close()
+
+
+# ==========================================================
+# PRUEBA DE CONEXIÓN
+# ==========================================================
+
+@app.route("/probar-conexion")
+def probar_conexion():
+
+    conn = None
+    cur = None
+
+    try:
+
+        conn = get_db_connection()
+
+        cur = conn.cursor()
+
+        cur.execute("SELECT current_database();")
+
+        base_datos = cur.fetchone()[0]
+
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM categorias;
+        """)
+
+        cantidad_categorias = cur.fetchone()[0]
+
+        return f"""
+        <h1>Conexión correcta</h1>
+
+        <p><strong>Base de datos:</strong>
+        {base_datos}</p>
+
+        <p><strong>Cantidad de categorías:</strong>
+        {cantidad_categorias}</p>
+        """
+
+    except Exception as e:
+
+        return f"""
+        <h1>Error de conexión</h1>
+
+        <p>{e}</p>
+        """
+
+    finally:
+
+        if cur:
+            cur.close()
+
+        if conn:
+            conn.close()
+
+
+# ==========================================================
+# EJECUTAR FLASK
+# ==========================================================
 
 if __name__ == "__main__":
 
-    # Crear base de datos y tabla
-    crear_base_datos()
-
-    # Ejecutar Flask
-    app.run(debug=True)
+    app.run(
+        debug=True,
+        host="127.0.0.1",
+        port=5000
+    )

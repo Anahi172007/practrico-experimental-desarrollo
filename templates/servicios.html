@@ -33,6 +33,11 @@ Servicios
                     ${{ "%.2f"|format(servicio.precio) }}
                 </p>
 
+                <p>
+                    <strong>Categoría:</strong>
+                    {{ servicio.categoria }}
+                </p>
+
                 {% if servicio.disponible %}
 
                     <span class="badge bg-success">
@@ -42,13 +47,23 @@ Servicios
                 {% else %}
 
                     <span class="badge bg-danger">
-                        Agotado
+                        No disponible
                     </span>
 
                 {% endif %}
 
             </div>
 
+        </div>
+
+    </div>
+
+    {% else %}
+
+    <div class="col-12">
+
+        <div class="alert alert-info text-center">
+            No hay servicios registrados todavía.
         </div>
 
     </div>
